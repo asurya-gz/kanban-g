@@ -3,12 +3,7 @@
 import React, { useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 
-const DeleteConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  columnTitle,
-}) => {
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
@@ -42,9 +37,7 @@ const DeleteConfirmationModal = ({
             </h3>
 
             <p className="text-center text-gray-600 mb-6">
-              Are you sure you want to delete{" "}
-              <span className="font-medium text-gray-900">"{columnTitle}"</span>
-              ? This action cannot be undone.
+              Are you sure you want to delete ? This action cannot be undone.
             </p>
 
             <div className="flex space-x-3">

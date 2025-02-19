@@ -2,13 +2,21 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import Cookies from "js-cookie";
 
 const LogoutPage = () => {
   const router = useRouter();
 
   useEffect(() => {
     const logout = async () => {
+      // Remove all cookies
+      Cookies.remove("token");
+      Cookies.remove("user");
+
+      // Wait for animation
       await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Redirect to login page
       router.push("/");
     };
 

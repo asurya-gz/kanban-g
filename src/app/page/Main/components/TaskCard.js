@@ -1,7 +1,8 @@
 import React from "react";
-import { Hash } from "lucide-react";
+import { Hash, User } from "lucide-react";
 
 const TaskCard = ({ card, onDragStart, onClick }) => {
+  console.log(card);
   return (
     <div
       draggable
@@ -31,7 +32,10 @@ const TaskCard = ({ card, onDragStart, onClick }) => {
           {card.priority}
         </span>
       </div>
-      <p className="text-sm text-gray-600 mb-2">{card.description}</p>
+      <div className="flex items-center gap-1.5 mb-2">
+        <User className="w-4 h-4 text-gray-400" />
+        <p className="text-sm text-gray-600">{card.name}</p>
+      </div>
       <div className="flex items-center">
         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-lg">
           {card.job}

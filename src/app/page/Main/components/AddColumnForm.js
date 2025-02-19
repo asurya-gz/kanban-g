@@ -1,13 +1,18 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import axios from "axios";
 
 const AddColumnForm = ({
   newColumnTitle,
   setNewColumnTitle,
   onSave,
+  board,
   onCancel,
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Add state to track submission
+
   // Handle Escape key
   useEffect(() => {
     const handleEscape = (e) => {
@@ -18,9 +23,35 @@ const AddColumnForm = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onCancel]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave();
+
+    // Prevent double submission
+    if (isSubmitting || isLoading) return;
+
+    setIsSubmitting(true);
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/api/create-column",
+        {
+          boardId: board.id,
+          columnName: newColumnTitle,
+        }
+      );
+
+      if (response.data) {
+        onSave(response.data);
+        setNewColumnTitle("");
+        onCancel(); // Close the modal after successful submission
+      }
+    } catch (error) {
+      console.error("Error creating column:", error);
+    } finally {
+      setIsLoading(false);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -42,6 +73,7 @@ const AddColumnForm = ({
             <button
               onClick={onCancel}
               className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              disabled={isSubmitting}
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -64,6 +96,7 @@ const AddColumnForm = ({
                 placeholder="Enter column title"
                 className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 transition-shadow duration-200"
                 autoFocus
+                disabled={isSubmitting}
               />
             </div>
 
@@ -71,14 +104,16 @@ const AddColumnForm = ({
             <div className="flex items-center space-x-3 pt-4">
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-medium"
+                disabled={isLoading || isSubmitting || !newColumnTitle.trim()}
+                className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Column
+                {isLoading ? "Adding..." : "Add Column"}
               </button>
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
+                disabled={isSubmitting}
+                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>

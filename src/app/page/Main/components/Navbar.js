@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useRef, useEffect } from "react";
 import {
   LogOut,
@@ -11,6 +9,9 @@ import {
   EyeOff,
 } from "lucide-react";
 import Link from "next/link";
+import Cookies from "js-cookie";
+import { toast } from "react-hot-toast";
+import axios from "axios";
 
 const Navbar = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -18,6 +19,8 @@ const Navbar = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -27,6 +30,18 @@ const Navbar = () => {
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const modalRef = useRef(null);
+
+  useEffect(() => {
+    const userCookie = Cookies.get("user");
+    if (userCookie) {
+      try {
+        const parsedUser = JSON.parse(userCookie);
+        setUserData(parsedUser);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -56,16 +71,58 @@ const Navbar = () => {
     }));
   };
 
-  const handleChangePassword = (e) => {
-    e.preventDefault();
-    // Add your password change logic here
-    console.log(formData);
-    setShowPasswordModal(false);
+  const resetForm = () => {
     setFormData({
       oldPassword: "",
       newPassword: "",
       confirmPassword: "",
     });
+    setShowPasswordModal(false);
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+
+    // Validate passwords match
+    if (formData.newPassword !== formData.confirmPassword) {
+      alert("New passwords don't match!");
+      return;
+    }
+
+    // Validate password length
+    if (formData.newPassword.length < 6) {
+      alert("New password must be at least 6 characters long!");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const userEmail = userData?.email;
+      if (!userEmail) {
+        throw new Error("User email not found!");
+      }
+
+      const response = await axios.post(
+        "http://localhost:4000/api/change-password",
+        {
+          email: userEmail,
+          oldPassword: formData.oldPassword,
+          newPassword: formData.newPassword,
+        }
+      );
+
+      if (response.status === 200) {
+        alert("Password updated successfully!");
+        resetForm();
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to update password";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,9 +157,11 @@ const Navbar = () => {
                   >
                     <div className="px-4 py-2 border-b border-gray-100">
                       <p className="text-sm font-medium text-gray-900">
-                        John Doe
+                        {userData?.username || "Loading..."}
                       </p>
-                      <p className="text-xs text-gray-500">john@example.com</p>
+                      <p className="text-xs text-gray-500">
+                        {userData?.email || "Loading..."}
+                      </p>
                     </div>
 
                     <button
@@ -234,9 +293,14 @@ const Navbar = () => {
 
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                disabled={isLoading}
+                className={`w-full bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium ${
+                  isLoading
+                    ? "opacity-70 cursor-not-allowed"
+                    : "hover:bg-blue-700"
+                }`}
               >
-                Update Password
+                {isLoading ? "Updating..." : "Update Password"}
               </button>
             </form>
           </div>

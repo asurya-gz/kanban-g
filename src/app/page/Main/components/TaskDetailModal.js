@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   X,
   Edit2,
@@ -7,9 +8,12 @@ import {
   Tag,
   AlertCircle,
   Hash,
+  User,
 } from "lucide-react";
 
 const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
@@ -21,6 +25,52 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
 
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
+
+  const handleDeleteCard = async () => {
+    if (!card.id) {
+      alert("ID kartu tidak valid");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+
+      // Periksa kartu terlebih dahulu
+      const checkResponse = await axios.post(
+        "http://localhost:4000/api/getbyid-card",
+        { cardId: card.id }
+      );
+
+      if (checkResponse.data.message !== "Berhasil mendapatkan detail kartu.") {
+        alert("Tidak dapat menemukan card yang akan dihapus");
+        setIsDeleting(false);
+        return;
+      }
+
+      // Hapus kartu
+      const deleteResponse = await axios.delete(
+        "http://localhost:4000/api/delete-card",
+        {
+          data: { cardId: card.id },
+        }
+      );
+
+      if (deleteResponse.data.message === "Kartu berhasil dihapus!") {
+        onClose(); // Tutup modal terlebih dahulu
+        await onDelete(card.id); // Refresh data
+        setTimeout(() => {
+          alert("Card berhasil dihapus!"); // Tampilkan alert setelah data di-refresh
+        }, 100);
+      } else {
+        alert("Gagal menghapus card");
+      }
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      alert(error.message || "Terjadi kesalahan saat menghapus card");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -64,13 +114,15 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
                 onClick={onEdit}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-50 transition-colors"
                 title="Edit"
+                disabled={isDeleting}
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
-                onClick={onDelete}
+                onClick={handleDeleteCard}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="Delete"
+                disabled={isDeleting}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -78,6 +130,7 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
                 onClick={onClose}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-50 transition-colors"
                 title="Close"
+                disabled={isDeleting}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -96,6 +149,12 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
 
             {/* Tags & Info */}
             <div className="space-y-3">
+              {/* Assignee */}
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{card.name}</span>
+              </div>
+
               {/* Job Tag */}
               <div className="flex items-center space-x-2">
                 <Tag className="w-4 h-4 text-gray-400" />
@@ -123,8 +182,9 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
             <button
               onClick={onClose}
               className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isDeleting}
             >
-              Close
+              {isDeleting ? "Menghapus..." : "Close"}
             </button>
           </div>
         </div>

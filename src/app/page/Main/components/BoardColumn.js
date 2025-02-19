@@ -1,10 +1,10 @@
-// BoardColumn.js
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Plus, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import TaskCard from "./TaskCard";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import AddCardModal from "./AddCardModal";
+import axios from "axios";
 
 const BoardColumn = ({
   board,
@@ -18,21 +18,20 @@ const BoardColumn = ({
   onCardClick,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(board.title);
+  const [localColumnTitle, setLocalColumnTitle] = useState(
+    board.column_name || ""
+  );
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddCard, setShowAddCard] = useState(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const inputRef = useRef(null);
-  const [showAddCard, setShowAddCard] = useState(false);
-  const [newCardData, setNewCardData] = useState({
-    title: "",
-    description: "",
-    priority: "Low",
-    job: "",
-  });
 
-  // Menu click outside handler
+  useEffect(() => {
+    setLocalColumnTitle(board.column_name || "");
+  }, [board.column_name]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -53,23 +52,92 @@ const BoardColumn = ({
     };
   }, [showMenu]);
 
-  const handleEditSubmit = (e) => {
-    e?.preventDefault();
-    if (editedTitle.trim() && editedTitle !== board.title) {
-      onUpdateColumnTitle(board.id, editedTitle.trim());
+  const updateColumnTitle = async (columnId, newTitle) => {
+    if (!columnId || !newTitle.trim()) {
+      alert("Judul kolom tidak boleh kosong!");
+      return false;
+    }
+
+    try {
+      // Optimistic update - update UI first
+      onUpdateColumnTitle({
+        ...board,
+        column_name: newTitle.trim(),
+      });
+
+      const response = await axios.put(
+        "http://localhost:4000/api/update-column",
+        {
+          columnId: columnId,
+          columnName: newTitle.trim(),
+        }
+      );
+
+      if (response.data.success) {
+        return true;
+      }
+
+      // If API call fails, revert the changes
+      onUpdateColumnTitle({
+        ...board,
+        column_name: board.column_name,
+      });
+      return false;
+    } catch (error) {
+      console.error("Error updating column title:", error);
+      // Revert changes on error
+      onUpdateColumnTitle({
+        ...board,
+        column_name: board.column_name,
+      });
+      alert("Terjadi kesalahan saat memperbarui judul kolom");
+      return false;
+    }
+  };
+
+  const handleTitleUpdate = async () => {
+    if (!localColumnTitle.trim()) {
+      alert("Judul kolom tidak boleh kosong!");
+      setLocalColumnTitle(board.column_name);
+      setIsEditing(false);
+      return;
+    }
+
+    if (localColumnTitle.trim() === board.column_name) {
+      setIsEditing(false);
+      return;
+    }
+
+    const success = await updateColumnTitle(board.id, localColumnTitle.trim());
+
+    if (!success) {
+      setLocalColumnTitle(board.column_name);
     } else {
-      setEditedTitle(board.title);
+      setLocalColumnTitle(localColumnTitle.trim());
     }
     setIsEditing(false);
   };
 
-  const handleAddCard = (formData) => {
-    const newCard = {
-      id: Date.now(),
-      ...formData,
-    };
-    onAddCard(board.id, newCard);
-    setShowAddCard(false);
+  const handleKeyDown = async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      await handleTitleUpdate();
+    } else if (e.key === "Escape") {
+      setLocalColumnTitle(board.column_name);
+      setIsEditing(false);
+    }
+  };
+
+  const handleBlur = async () => {
+    await handleTitleUpdate();
+  };
+
+  const handleAddCard = (columnId, newCard) => {
+    // Update the local column state with the new card
+    const updatedCards = [...board.cards, newCard];
+
+    // Pass the updated card data to the parent component
+    onAddCard(columnId, newCard);
   };
 
   return (
@@ -89,10 +157,10 @@ const BoardColumn = ({
                   <input
                     ref={inputRef}
                     type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    onBlur={handleEditSubmit}
-                    onKeyDown={(e) => e.key === "Escape" && handleEditSubmit()}
+                    value={localColumnTitle}
+                    onChange={(e) => setLocalColumnTitle(e.target.value)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
                     className="w-full px-3 py-1.5 border border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 font-medium bg-blue-50/50"
                     autoFocus
                   />
@@ -102,7 +170,7 @@ const BoardColumn = ({
                   onClick={() => setIsEditing(true)}
                   className="font-medium text-gray-900 cursor-pointer group flex items-center py-1.5 px-3 -ml-3 rounded-lg hover:bg-gray-100 transition-colors duration-200"
                 >
-                  <span>{board.title}</span>
+                  <span>{localColumnTitle}</span>
                   <Edit2 className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
                 </div>
               )}
@@ -149,7 +217,7 @@ const BoardColumn = ({
         </div>
 
         <div className="bg-white/60 backdrop-blur-lg rounded-b-xl p-3 space-y-3 min-h-[200px] border-x border-b border-gray-200">
-          {board.cards.map((card) => (
+          {board.cards?.map((card) => (
             <TaskCard
               key={card.id}
               card={card}
@@ -175,19 +243,21 @@ const BoardColumn = ({
           onDeleteColumn(board.id);
           setShowDeleteModal(false);
         }}
-        columnTitle={board.title}
+        columnTitle={localColumnTitle}
       />
 
       <AddCardModal
         isOpen={showAddCard}
         onClose={() => setShowAddCard(false)}
         onSubmit={handleAddCard}
+        columnId={board.id} // Pass the current column's ID
         initialData={{
           title: "",
           description: "",
           priority: "Low",
           job: "",
         }}
+        onAddCard={onAddCard}
       />
 
       <style jsx>{`

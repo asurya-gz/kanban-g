@@ -1,16 +1,69 @@
-// AddCardModal.js
 "use client";
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import axios from "axios";
 
-const AddCardModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState(initialData);
+const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
+  const [formData, setFormData] = useState({
+    cardTitle: "",
+    priority: "Low",
+    description: "",
+    job: "",
+    name: "", // Added name to form data
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/api/create-card",
+        {
+          columnId: columnId,
+          cardTitle: formData.cardTitle,
+          priority: formData.priority,
+          description: formData.description,
+          name: formData.name,
+          job: formData.job,
+        }
+      );
+
+      if (response.data) {
+        // Create a properly formatted card object from the response
+        const newCard = {
+          id: response.data.cardId,
+          title: formData.cardTitle,
+          priority: formData.priority,
+          description: formData.description,
+          name: formData.name,
+          job: formData.job,
+          position: response.data.position,
+        };
+
+        // Pass the formatted card to the parent component
+        onAddCard(columnId, newCard);
+
+        // Reset form data to empty values
+        setFormData({
+          cardTitle: "",
+          priority: "",
+          description: "",
+          name: "",
+          job: "",
+        });
+
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error creating card:", error);
+      alert("Error creating card. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -43,11 +96,11 @@ const AddCardModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                   </label>
                   <input
                     type="text"
-                    value={formData.title}
+                    value={formData.cardTitle}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        title: e.target.value,
+                        cardTitle: e.target.value,
                       }))
                     }
                     placeholder="Enter card title"
@@ -58,6 +111,25 @@ const AddCardModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter your name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Priority
@@ -77,25 +149,25 @@ const AddCardModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                       <option value="High">High</option>
                     </select>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Job Type
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.job}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          job: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter job type"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Job Type
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.job}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        job: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter job type"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
                 </div>
 
                 <div>
@@ -121,14 +193,16 @@ const AddCardModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                     type="button"
                     onClick={onClose}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors duration-200"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200"
+                    disabled={isSubmitting}
                   >
-                    Add Card
+                    {isSubmitting ? "Adding..." : "Add Card"}
                   </button>
                 </div>
               </div>

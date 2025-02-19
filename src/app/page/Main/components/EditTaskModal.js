@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import axios from "axios";
 
 const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
   const [formData, setFormData] = useState({
@@ -9,12 +10,58 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
     description: card.description,
     priority: card.priority,
     job: card.job,
+    name: card.name,
+    column_id: card.column_id, // Pastikan column_id juga dimasukkan
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(card.id, formData);
-    onClose();
+    setIsSubmitting(true);
+
+    const payload = {
+      cardId: formData.id,
+      card_title: formData.title,
+      priority: formData.priority,
+      description: formData.description,
+      name: formData.name,
+      job: formData.job,
+    };
+
+    try {
+      const response = await axios.put(
+        "http://localhost:4000/api/update-card",
+        payload
+      );
+
+      if (response.status === 200) {
+        // Buat objek card yang diperbarui dengan semua properti yang diperlukan
+        const updatedCard = {
+          ...card, // Pertahankan semua properti asli
+          id: formData.id,
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          job: formData.job,
+          name: formData.name,
+          column_id: formData.column_id,
+          // Tambahkan properti lain yang mungkin diperlukan
+        };
+
+        // Panggil onSave dengan data lengkap
+        await onSave(formData.column_id, formData.id, updatedCard);
+
+        // Tunggu sebentar sebelum menutup modal
+        setTimeout(() => {
+          onClose();
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      alert("Failed to update task. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -34,7 +81,7 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
         onClick={onClose}
       />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg w-full max-w-lg">
+        <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl">
           <form onSubmit={handleSubmit}>
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">Edit Task</h3>
@@ -47,76 +94,95 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ID
-                </label>
-                <input
-                  type="text"
-                  name="id"
-                  value={formData.id}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  required
-                />
-              </div>
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ID
+                    </label>
+                    <input
+                      type="text"
+                      name="id"
+                      value={formData.id}
+                      readOnly
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-gray-50"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  required
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                      required
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  rows="3"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assignee Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                      required
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  name="priority"
-                  value={formData.priority}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                >
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
+                    <select
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                    >
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Job Type
-                </label>
-                <input
-                  type="text"
-                  name="job"
-                  value={formData.job}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  required
-                />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Job Type
+                    </label>
+                    <input
+                      type="text"
+                      name="job"
+                      value={formData.job}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                      rows="12"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -125,14 +191,16 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
                 type="button"
                 onClick={onClose}
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                disabled={isSubmitting}
               >
-                Save Changes
+                {isSubmitting ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
