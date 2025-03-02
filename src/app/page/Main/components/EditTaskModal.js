@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
   const [formData, setFormData] = useState({
@@ -11,21 +12,39 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
     priority: card.priority,
     job: card.job,
     name: card.name,
-    column_id: card.column_id, // Pastikan column_id juga dimasukkan
+    column_id: card.column_id,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  // Get userId from cookies when component mounts
+  useEffect(() => {
+    try {
+      const userCookie = Cookies.get("user");
+      if (userCookie) {
+        const user = JSON.parse(userCookie);
+        setUserId(user.id);
+      }
+    } catch (error) {
+      console.error("Error parsing user cookie:", error);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Adjusted payload to match what the controller expects
     const payload = {
       cardId: formData.id,
-      card_title: formData.title,
-      priority: formData.priority,
-      description: formData.description,
-      name: formData.name,
-      job: formData.job,
+      cardData: {
+        card_title: formData.title,
+        priority: formData.priority,
+        description: formData.description,
+        name: formData.name,
+        job: formData.job,
+      },
+      userId: userId,
     };
 
     try {
@@ -35,9 +54,9 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
       );
 
       if (response.status === 200) {
-        // Buat objek card yang diperbarui dengan semua properti yang diperlukan
+        // Create updated card object with all required properties
         const updatedCard = {
-          ...card, // Pertahankan semua properti asli
+          ...card, // Keep all original properties
           id: formData.id,
           title: formData.title,
           description: formData.description,
@@ -45,13 +64,12 @@ const EditTaskModal = ({ isOpen, onClose, card, onSave }) => {
           job: formData.job,
           name: formData.name,
           column_id: formData.column_id,
-          // Tambahkan properti lain yang mungkin diperlukan
         };
 
-        // Panggil onSave dengan data lengkap
+        // Call onSave with the complete data
         await onSave(formData.column_id, formData.id, updatedCard);
 
-        // Tunggu sebentar sebelum menutup modal
+        // Wait briefly before closing modal
         setTimeout(() => {
           onClose();
         }, 500);

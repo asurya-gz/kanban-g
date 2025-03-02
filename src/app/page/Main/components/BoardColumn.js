@@ -16,6 +16,7 @@ const BoardColumn = ({
   onAddCard,
   onUpdateColumnTitle,
   onCardClick,
+  isViewOnly = false, // Add isViewOnly prop with default value
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localColumnTitle, setLocalColumnTitle] = useState(
@@ -53,6 +54,9 @@ const BoardColumn = ({
   }, [showMenu]);
 
   const updateColumnTitle = async (columnId, newTitle) => {
+    // Skip if in view-only mode
+    if (isViewOnly) return false;
+
     if (!columnId || !newTitle.trim()) {
       alert("Judul kolom tidak boleh kosong!");
       return false;
@@ -96,6 +100,12 @@ const BoardColumn = ({
   };
 
   const handleTitleUpdate = async () => {
+    // Skip if in view-only mode
+    if (isViewOnly) {
+      setIsEditing(false);
+      return;
+    }
+
     if (!localColumnTitle.trim()) {
       alert("Judul kolom tidak boleh kosong!");
       setLocalColumnTitle(board.column_name);
@@ -133,6 +143,9 @@ const BoardColumn = ({
   };
 
   const handleAddCard = (columnId, newCard) => {
+    // Skip if in view-only mode
+    if (isViewOnly) return;
+
     // Update the local column state with the new card
     const updatedCards = [...board.cards, newCard];
 
@@ -144,15 +157,15 @@ const BoardColumn = ({
     <>
       <div
         className="flex-shrink-0 w-80 text-gray-600"
-        draggable
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
+        draggable={!isViewOnly} // Only allow drag if not in view-only mode
+        onDragStart={!isViewOnly ? onDragStart : undefined}
+        onDragOver={!isViewOnly ? onDragOver : undefined}
+        onDrop={!isViewOnly ? onDrop : undefined}
       >
         <div className="bg-white rounded-t-xl p-3 border border-gray-200">
           <div className="flex justify-between items-center">
             <div className="flex-1 mr-2">
-              {isEditing ? (
+              {isEditing && !isViewOnly ? (
                 <div className="animate-fade-in">
                   <input
                     ref={inputRef}
@@ -167,52 +180,60 @@ const BoardColumn = ({
                 </div>
               ) : (
                 <div
-                  onClick={() => setIsEditing(true)}
-                  className="font-medium text-gray-900 cursor-pointer group flex items-center py-1.5 px-3 -ml-3 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                  onClick={() => !isViewOnly && setIsEditing(true)}
+                  className={`font-medium text-gray-900 ${
+                    !isViewOnly ? "cursor-pointer group" : ""
+                  } flex items-center py-1.5 px-3 -ml-3 rounded-lg ${
+                    !isViewOnly ? "hover:bg-gray-100" : ""
+                  } transition-colors duration-200`}
                 >
                   <span>{localColumnTitle}</span>
-                  <Edit2 className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
+                  {!isViewOnly && (
+                    <Edit2 className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="relative">
-              <button
-                ref={buttonRef}
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-              >
-                <MoreVertical className="w-4 h-4 text-gray-500" />
-              </button>
-
-              {showMenu && (
-                <div
-                  ref={menuRef}
-                  className="absolute right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 w-48 py-1 z-50 animate-menu-in"
+            {!isViewOnly && (
+              <div className="relative">
+                <button
+                  ref={buttonRef}
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
-                  <button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  <MoreVertical className="w-4 h-4 text-gray-500" />
+                </button>
+
+                {showMenu && (
+                  <div
+                    ref={menuRef}
+                    className="absolute right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 w-48 py-1 z-50 animate-menu-in"
                   >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit Column
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDeleteModal(true);
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Column
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Edit Column
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDeleteModal(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Column
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -221,44 +242,55 @@ const BoardColumn = ({
             <TaskCard
               key={card.id}
               card={card}
-              onDragStart={(e) => onCardDragStart(e, card.id, board.id)}
+              onDragStart={
+                !isViewOnly
+                  ? (e) => onCardDragStart(e, card.id, board.id)
+                  : undefined
+              }
               onClick={() => onCardClick(card)}
+              isViewOnly={isViewOnly}
             />
           ))}
 
-          <button
-            onClick={() => setShowAddCard(true)}
-            className="w-full p-2 text-gray-600 hover:text-gray-900 text-sm flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-400 transition-colors duration-200"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Card
-          </button>
+          {!isViewOnly && (
+            <button
+              onClick={() => setShowAddCard(true)}
+              className="w-full p-2 text-gray-600 hover:text-gray-900 text-sm flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-400 transition-colors duration-200"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Card
+            </button>
+          )}
         </div>
       </div>
 
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={() => {
-          onDeleteColumn(board.id);
-          setShowDeleteModal(false);
-        }}
-        columnTitle={localColumnTitle}
-      />
+      {!isViewOnly && (
+        <>
+          <DeleteConfirmationModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={() => {
+              onDeleteColumn(board.id);
+              setShowDeleteModal(false);
+            }}
+            columnTitle={localColumnTitle}
+          />
 
-      <AddCardModal
-        isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
-        onSubmit={handleAddCard}
-        columnId={board.id} // Pass the current column's ID
-        initialData={{
-          title: "",
-          description: "",
-          priority: "Low",
-          job: "",
-        }}
-        onAddCard={onAddCard}
-      />
+          <AddCardModal
+            isOpen={showAddCard}
+            onClose={() => setShowAddCard(false)}
+            onSubmit={handleAddCard}
+            columnId={board.id} // Pass the current column's ID
+            initialData={{
+              title: "",
+              description: "",
+              priority: "Low",
+              job: "",
+            }}
+            onAddCard={onAddCard}
+          />
+        </>
+      )}
 
       <style jsx>{`
         @keyframes menuIn {

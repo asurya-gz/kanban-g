@@ -11,7 +11,14 @@ import {
   User,
 } from "lucide-react";
 
-const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
+const TaskDetailModal = ({
+  isOpen,
+  onClose,
+  card,
+  onEdit,
+  onDelete,
+  isViewOnly,
+}) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -110,22 +117,26 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
               <p className="text-sm text-gray-500">Task Details</p>
             </div>
             <div className="flex items-center space-x-1">
-              <button
-                onClick={onEdit}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-50 transition-colors"
-                title="Edit"
-                disabled={isDeleting}
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleDeleteCard}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                title="Delete"
-                disabled={isDeleting}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {!isViewOnly && (
+                <>
+                  <button
+                    onClick={onEdit}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-50 transition-colors"
+                    title="Edit"
+                    disabled={isDeleting}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleDeleteCard}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Delete"
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-50 transition-colors"
@@ -184,7 +195,7 @@ const TaskDetailModal = ({ isOpen, onClose, card, onEdit, onDelete }) => {
               className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={isDeleting}
             >
-              {isDeleting ? "Menghapus..." : "Close"}
+              {isViewOnly ? "Close" : isDeleting ? "Menghapus..." : "Close"}
             </button>
           </div>
         </div>

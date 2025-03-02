@@ -11,6 +11,7 @@ const BoardDropdown = ({
   selectedBoard,
   onBoardSelect,
   onBoardsUpdate,
+  isViewOnly = false, // Add isViewOnly prop with default value
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -23,6 +24,9 @@ const BoardDropdown = ({
   }, [boards]);
 
   const handleDeleteBoard = async (boardId) => {
+    // Skip if in view-only mode
+    if (isViewOnly) return;
+
     try {
       const user = JSON.parse(Cookies.get("user"));
       const userId = user.id;
@@ -90,6 +94,9 @@ const BoardDropdown = ({
   };
 
   const openEditModal = (board) => {
+    // Skip if in view-only mode
+    if (isViewOnly) return;
+
     setEditingBoard(board);
     setIsEditModalOpen(true);
     setIsDropdownOpen(false);
@@ -113,6 +120,18 @@ const BoardDropdown = ({
 
   const fetchLatestBoards = async () => {
     try {
+      // For view-only mode, we might need to fetch boards differently
+      // since the user might not be logged in
+      if (isViewOnly) {
+        // If we have boards from props, use them
+        if (boards && boards.length > 0) {
+          return boards;
+        }
+        // If view-only needs to fetch public boards, implement here
+        // For now, return empty array to prevent errors
+        return [];
+      }
+
       const user = JSON.parse(Cookies.get("user"));
       const response = await axios.post(
         "http://localhost:4000/api/all-userboard",
@@ -158,20 +177,27 @@ const BoardDropdown = ({
 
         {isDropdownOpen && (
           <div className="absolute z-10 w-64 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg">
-            <div className="p-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsAddModalOpen(true);
-                  setIsDropdownOpen(false);
-                }}
-                className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-blue-50 rounded-md"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Board
-              </button>
-            </div>
-            <ul className="py-2 max-h-60 overflow-y-auto border-t">
+            {/* Only show Add New Board button if not in view-only mode */}
+            {!isViewOnly && (
+              <div className="p-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAddModalOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-blue-50 rounded-md"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Board
+                </button>
+              </div>
+            )}
+            <ul
+              className={`py-2 max-h-60 overflow-y-auto ${
+                !isViewOnly ? "border-t" : ""
+              }`}
+            >
               {localBoards.map((board) => (
                 <li key={board.id} className="px-3 py-2 hover:bg-blue-50 group">
                   <div className="flex items-center justify-between">
@@ -186,30 +212,33 @@ const BoardDropdown = ({
                       <div className="w-2 h-2 rounded-full bg-green-500 mr-3"></div>
                       <span className="text-gray-700">{board.board_name}</span>
                     </div>
-                    <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(board);
-                        }}
-                        className="p-1 hover:bg-blue-100 rounded"
-                      >
-                        <Pencil className="w-4 h-4 text-gray-500" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (board && board.id) {
-                            handleDeleteBoard(board.id);
-                          } else {
-                            alert("Board ID tidak ditemukan!");
-                          }
-                        }}
-                        className="p-1 hover:bg-red-100 rounded"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
+                    {/* Only show edit/delete buttons if not in view-only mode */}
+                    {!isViewOnly && (
+                      <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(board);
+                          }}
+                          className="p-1 hover:bg-blue-100 rounded"
+                        >
+                          <Pencil className="w-4 h-4 text-gray-500" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (board && board.id) {
+                              handleDeleteBoard(board.id);
+                            } else {
+                              alert("Board ID tidak ditemukan!");
+                            }
+                          }}
+                          className="p-1 hover:bg-red-100 rounded"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -218,18 +247,23 @@ const BoardDropdown = ({
         )}
       </div>
 
-      <AddBoardModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onBoardsUpdate={onBoardsUpdate}
-      />
+      {/* Only render modals if not in view-only mode */}
+      {!isViewOnly && (
+        <>
+          <AddBoardModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onBoardsUpdate={onBoardsUpdate}
+          />
 
-      <EditBoardModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        onBoardsUpdate={handleBoardUpdate}
-        board={editingBoard}
-      />
+          <EditBoardModal
+            isOpen={isEditModalOpen}
+            onClose={handleCloseEditModal}
+            onBoardsUpdate={handleBoardUpdate}
+            board={editingBoard}
+          />
+        </>
+      )}
     </div>
   );
 };

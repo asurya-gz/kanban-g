@@ -7,13 +7,16 @@ import {
   X,
   Eye,
   EyeOff,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import Image from "next/image";
 
-const Navbar = () => {
+const Navbar = ({ isViewOnly = false }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
@@ -130,66 +133,95 @@ const Navbar = () => {
       <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 text-gray-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Project Board
+            <div className="h-8">
+              <Image
+                src="/image.png"
+                alt="Project Board Logo"
+                width={120}
+                height={32}
+                className="object-contain"
+                priority
+              />
             </div>
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <button
-                  ref={buttonRef}
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
-                      showProfileMenu ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showProfileMenu && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50"
-                  >
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">
-                        {userData?.username || "Loading..."}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {userData?.email || "Loading..."}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setShowPasswordModal(true);
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                    >
-                      <KeyRound className="w-4 h-4 mr-2 text-gray-500" />
-                      Change Password
+              {isViewOnly ? (
+                // View-only mode navigation options
+                <div className="flex items-center space-x-2">
+                  <Link href="/page/Login">
+                    <button className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                      <LogIn className="w-4 h-4" />
+                      <span>Login</span>
                     </button>
-                    <Link href="/page/Logout">
-                      <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center">
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Log Out
+                  </Link>
+                  <Link href="/page/Register">
+                    <button className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                      <UserPlus className="w-4 h-4" />
+                      <span>Register</span>
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                // Logged-in user navigation options
+                <div className="relative">
+                  <button
+                    ref={buttonRef}
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {userData?.username || "User"}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
+                        showProfileMenu ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {showProfileMenu && (
+                    <div
+                      ref={menuRef}
+                      className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50"
+                    >
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">
+                          {userData?.username || "Loading..."}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {userData?.email || "Loading..."}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setShowPasswordModal(true);
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                      >
+                        <KeyRound className="w-4 h-4 mr-2 text-gray-500" />
+                        Change Password
                       </button>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                      <Link href="/page/Logout">
+                        <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center">
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Log Out
+                        </button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
+      {/* Password Change Modal - only render if not in view-only mode */}
+      {!isViewOnly && showPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div
             ref={modalRef}

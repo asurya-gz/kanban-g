@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
   const [formData, setFormData] = useState({
@@ -9,28 +10,43 @@ const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
     priority: "Low",
     description: "",
     job: "",
-    name: "", // Added name to form data
+    name: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  if (!isOpen) return null;
+  // Get userId from cookies when component mounts
+  useEffect(() => {
+    try {
+      const userCookie = Cookies.get("user");
+      if (userCookie) {
+        const user = JSON.parse(userCookie);
+        setUserId(user.id);
+      }
+    } catch (error) {
+      console.error("Error parsing user cookie:", error);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Create cardData object to match backend expectation
+    const cardData = {
+      card_title: formData.cardTitle,
+      priority: formData.priority,
+      description: formData.description,
+      name: formData.name,
+      job: formData.job,
+    };
+
     try {
-      const response = await axios.post(
-        "http://localhost:4000/api/create-card",
-        {
-          columnId: columnId,
-          cardTitle: formData.cardTitle,
-          priority: formData.priority,
-          description: formData.description,
-          name: formData.name,
-          job: formData.job,
-        }
-      );
+      const response = await axios.post("http://localhost:4000/api/add-card", {
+        columnId: columnId,
+        cardData: cardData,
+        userId: userId,
+      });
 
       if (response.data) {
         // Create a properly formatted card object from the response
@@ -41,7 +57,7 @@ const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
           description: formData.description,
           name: formData.name,
           job: formData.job,
-          position: response.data.position,
+          column_id: columnId, // Adding column_id for consistency
         };
 
         // Pass the formatted card to the parent component
@@ -50,7 +66,7 @@ const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
         // Reset form data to empty values
         setFormData({
           cardTitle: "",
-          priority: "",
+          priority: "Low",
           description: "",
           name: "",
           job: "",
@@ -65,6 +81,8 @@ const AddCardModal = ({ isOpen, onClose, columnId, onAddCard }) => {
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 w-full">
